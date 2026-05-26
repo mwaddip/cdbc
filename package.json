@@ -1,21 +1,11 @@
 {
-  "name": "claude-dbc",
+  "name": "cdbc",
   "version": "0.1.0",
   "description": "Skills for AI coding agent harnesses (Claude Code, Codex) — Bertrand Meyer's Design by Contract applied to multi-agent orchestration",
-  "bin": {
-    "claude-dbc": "./bin/install.js"
-  },
-  "files": [
-    "ac",
-    "bin/",
-    "skills/",
-    "README.md",
-    "LICENSE"
-  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mwaddip/claude-dbc.git"
+    "url": "git+https://github.com/mwaddip/cdbc.git"
   },
   "keywords": [
     "claude-code",
@@ -25,8 +15,5 @@
     "multi-agent",
     "orchestration",
     "agentskills"
-  ],
-  "engines": {
-    "node": ">=18"
-  }
+  ]
 }

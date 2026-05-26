@@ -1,0 +1,22 @@
+{
+  "name": "cdbc-marketplace",
+  "owner": {
+    "name": "mwaddip"
+  },
+  "metadata": {
+    "description": "Marketplace for cdbc — Design by Contract skills for AI coding agents",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "cdbc",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/mwaddip/cdbc.git"
+      },
+      "description": "Skills for AI coding agent harnesses applying Bertrand Meyer's Design by Contract to multi-agent orchestration",
+      "version": "0.1.0",
+      "strict": true
+    }
+  ]
+}

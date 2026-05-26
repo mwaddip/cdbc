@@ -1,6 +1,6 @@
 ---
 name: receiving-prompts
-description: For Claude Code sessions dispatched by a main session via the dispatching-prompts pattern. Establishes EXECUTOR identity, refuses to dispatch further, orchestrates reading the prompt file and doing the work. Use when the dispatch message says "use the receiving-prompts skill to execute the work in <file>.md".
+description: For Claude Code sessions dispatched by a main session via the dispatching-prompts pattern. Establishes EXECUTOR identity, refuses to dispatch further, orchestrates reading the prompt file and doing the work. Use when the dispatch message says "use the cdbc:receiving-prompts skill to execute the work in <file>.md".
 metadata:
   category: technique
   triggers: dispatched, executor, per-crate, receiving, prompt-file
@@ -10,7 +10,7 @@ metadata:
 
 You are an EXECUTOR session. The main session dispatched you to do work in a per-crate or sibling directory and pointed you at a prompt file containing the task description, boilerplate to load, and a coordination block to report back.
 
-This skill is the counterpart to `dispatching-prompts`. The main session uses `dispatching-prompts`; you use this one. **Reading this skill establishes your identity as EXECUTOR.** Internalize it before doing anything else.
+This skill is the counterpart to `cdbc:dispatching-prompts`. The main session uses `cdbc:dispatching-prompts`; you use this one. **Reading this skill establishes your identity as EXECUTOR.** Internalize it before doing anything else.
 
 ## Your job
 
@@ -22,7 +22,7 @@ This skill is the counterpart to `dispatching-prompts`. The main session uses `d
 
 ## You DO NOT
 
-- **Load the `dispatching-prompts` skill.** It is for the main session. If you auto-loaded it from the dispatch message phrasing before reaching this skill, IGNORE its workflow advice. You are explicitly NOT main. The contradiction between `dispatching-prompts` and this skill is resolved by your identity: EXECUTOR.
+- **Load the `cdbc:dispatching-prompts` skill.** It is for the main session. If you auto-loaded it from the dispatch message phrasing before reaching this skill, IGNORE its workflow advice. You are explicitly NOT main. The contradiction between `cdbc:dispatching-prompts` and this skill is resolved by your identity: EXECUTOR.
 - **Run `kitty @ launch` or `ac`**, or any command that spawns a new Claude session. There is no sub-session. There is YOU and the work in your prompt. The single kitty command allowed to you is `kitty @ send-text --match=id:<main>` for the coordination back-channel — that reports, it doesn't spawn.
 - **Edit files outside your working directory.** Including the prompt file itself. If it has stale window ids, typos, or other issues, surface them to main via the coordination channel; do not "fix" the file.
 - **Set up "another dispatch for safety"** or "a sub-session to keep concerns clean." You are the one doing the work.
@@ -40,7 +40,7 @@ If the prompt seems to ask you to do main-session work (dispatching, editing top
 
 Only when you were loaded via a dispatch message of the form:
 
-> use the receiving-prompts skill to execute the work in /path/to/prompts/foo.md
+> use the cdbc:receiving-prompts skill to execute the work in /path/to/prompts/foo.md
 
 If you find yourself reading this skill in any other context (e.g., the main session inspecting it to understand the dispatch contract), exit without changing behavior — you are not the executor in that case.
 

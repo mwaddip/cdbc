@@ -1,48 +1,80 @@
-# claude-dbc
+# cdbc
 
-Skills for AI coding agent harnesses (Claude Code, Codex) that apply Bertrand Meyer's **Design by Contract** at the architecture level: a shared-contracts directory holds the source of truth, the main session writes contracts and prompts (never component code), and per-component subagent sessions implement against the contracts in their own boundaries.
+A Claude Code plugin (`cdbc`) for multi-agent orchestration applying Bertrand Meyer's **Design by Contract** at the architecture level: a shared-contracts directory holds the source of truth, the main session writes contracts and prompts (never component code), and per-component sessions implement against the contracts within their boundaries.
 
-Three skills:
+The plugin includes original skills for the DBC pattern itself plus workflow skills forked from [superpowers](https://github.com/obra/superpowers) (MIT, Jesse Vincent), renamed and adapted for the cdbc multi-window dispatch model. See `NOTICE` for attributions.
 
-- **`design-by-contract-for-ai-agents`** — multi-component, multi-agent orchestration. Architecture, roles, workflow, contract format, prompt format, anti-patterns, and a Bootstrap Discovery flow that fires when you start (or join) a project that doesn't have contracts yet.
-- **`dispatching-prompts`** — main-session companion: how to send a prompt from the main session to a component session running in another terminal window. Covers the file-path injection pattern and the kitty + `ac` setup the author uses.
-- **`receiving-prompts`** — executor-side counterpart to `dispatching-prompts`. Establishes EXECUTOR identity at load time and forbids the dispatched session from re-dispatching (running `kitty @ launch` / `ac` / spawning sub-sessions). Loaded by the main session's send-text phrasing — `use the receiving-prompts skill to execute the work in <file>.md` — so it activates *before* the receiving session can auto-load `dispatching-prompts` and accidentally start a recursive dispatch chain. The `dispatching-prompts` skill's top section now defers to this one for any session whose first user-instruction is a prompt-file pointer.
+## Observed Autonomy
+
+The defining idea of this plugin: autonomous multi-session work with the operator watching. The main session designs and dispatches; executor sessions in kitty windows implement; the operator sees every step happen in real time and can interrupt, course-correct, or ask questions about the resulting code afterward.
+
+This is the visibility win over `superpowers:subagent-driven-development`, which runs implementation in ephemeral in-session subagents you can't watch mid-flight and can't talk to about their output after they finish. Subagents are fast and clean; windows are observable and persistent. The cdbc dispatch model picks observability — `dispatching-plans` opens N kitty windows in DAG order, each running its own Claude session on its own per-module plan, with the main session retaining context for review and discussion when the work comes back.
+
+Concretely:
+
+- **Watch.** Every executor session lives in a visible window; you see its output as it happens, not after the fact.
+- **Interrupt.** Notice drift, stop the window, send corrective instruction, or `/clear` and re-dispatch.
+- **Course-correct.** The wrapper prompt can be rewritten mid-flight if you spot a bad framing.
+- **Ask later.** After the executor reports done, you can keep talking to it about decisions it made — the session stays alive.
+- **No detection layer.** The operator IS the failure detection. No timeouts, no auto-retry, no t-of-n recovery — that's by design.
+
+The auto/gate distinction in `design-by-contract-for-ai-agents` is the operator's opt-in to this model. Gate mode preserves per-dispatch confirmation (for one-off prompts you want to inspect before submit). Auto mode lets `dispatching-plans` orchestrate a whole DAG without per-call interruption — the visibility through the windows is what keeps you in the loop instead.
+
+## Canonical Workflow
+
+For multi-module feature work in a project where `design-by-contract-for-ai-agents` has already established contracts:
+
+```
+cdbc:brainstorming                      →  design doc (with Module Decomposition table)
+cdbc:writing-multi-module-plans         →  N plans + DAG file
+cdbc:dispatching-plans                  →  N windows in DAG order, autonomous dispatch
+cdbc:requesting-code-review             →  per-module review on main session
+cdbc:finishing-a-development-branch     →  merge / PR / discard
+```
+
+For single-task work, use `cdbc:dispatching-prompts` (gated per dispatch) to send one prompt to one component session.
+
+## Skills
+
+### Architecture
+- **`design-by-contract-for-ai-agents`** — first skill to invoke in any multi-component project. Architecture, roles, contract format, anti-patterns, and Bootstrap Discovery for greenfield projects.
+
+### Bootstrap
+- **`using-cdbc`** — session-start orientation: skill inventory, the cdbc workflow shape, when to invoke which skill.
+
+### Dispatch
+- **`dispatching-prompts`** — main-session skill for sending a single prompt to one component session via kitty + `ac`. Operator gate per dispatch by default.
+- **`dispatching-plans`** — main-session orchestrator for multi-module work. Reads a DAG produced by `writing-multi-module-plans`, opens N kitty windows in dependency order, dispatches per-module wrapper prompts, tracks completion via the coordination back-channel. Requires DBC bootstrap with `auto` mode.
+- **`receiving-prompts`** — executor side. Establishes EXECUTOR identity at load time, prevents recursive dispatch. Loads automatically when a dispatch message names it (`use the cdbc:receiving-prompts skill to execute the work in <file>`).
+
+### Workflow (forked from superpowers)
+- **`brainstorming`** — design exploration. Includes an optional Module Decomposition step that emits a table consumed by `writing-multi-module-plans`.
+- **`writing-multi-module-plans`** — splits a design doc with module pointers into N per-module plans + a DAG. For single-plan flows, use upstream `superpowers:writing-plans` instead.
+- **`executing-plans`** — implements a plan task-by-task with batch checkpoints. Used on the window side by `dispatching-plans`, or directly for a single-plan flow.
+- **`test-driven-development`** — TDD discipline.
+- **`requesting-code-review`** — dispatch a code reviewer subagent to catch issues before they cascade.
+- **`finishing-a-development-branch`** — completion guidance: verify tests, present merge / PR / discard options, execute choice.
 
 ## Install
 
-Direct from GitHub, no npm publish in the loop:
+cdbc ships as a Claude Code plugin. Add the marketplace and install:
 
 ```
-npx github:mwaddip/claude-dbc
+/plugin marketplace add mwaddip/cdbc
+/plugin install cdbc@cdbc-marketplace
 ```
 
-That runs the installer interactively and asks which harness to target.
-
-Non-interactive forms:
-
-```
-npx github:mwaddip/claude-dbc install --harness=claude-code
-npx github:mwaddip/claude-dbc install --harness=codex
-npx github:mwaddip/claude-dbc install --harness=claude-code --skill=design-by-contract-for-ai-agents
-npx github:mwaddip/claude-dbc install --harness=claude-code --project
-npx github:mwaddip/claude-dbc list
-```
-
-| Flag | Effect |
-|------|--------|
-| `--harness=<name>` | `claude-code` or `codex` |
-| `--skill=<name>` | install one skill instead of all |
-| `--project` | install to `./.claude/skills/` or `./.agents/skills/` (project-level) instead of user-level |
-
-After install, restart your harness so it picks up the new skills.
+Skills become available under the `cdbc:` namespace (e.g., `cdbc:dispatching-prompts`). Restart Claude Code if skills don't appear after install.
 
 ## Updating
 
-Just rerun `npx github:mwaddip/claude-dbc` — `npx` re-clones the repo each invocation. The installer overwrites the skill files in place.
+```
+/plugin update cdbc@cdbc-marketplace
+```
 
 ## Optional: `ac` (kitty session launcher)
 
-The `dispatching-prompts` skill assumes you can launch agent sessions in named terminal windows that other sessions can find. The author uses kitty + a small bash script called `ac` (Auto Claude), shipped at the top of this repo. `ac` runs `claude` in the current kitty tab and writes a row to a flat session-registry file — so a parent Claude session can `grep <component> ${XDG_RUNTIME_DIR:-/tmp}/ac/sessions` instead of parsing the kilobytes of JSON `kitty @ ls` returns. Token savings add up across a long session.
+The `dispatching-prompts` and `dispatching-plans` skills assume you can launch agent sessions in named terminal windows that other sessions can find. The author uses kitty + a small bash script called `ac` (Auto Claude), shipped at the top of this repo. `ac` runs `claude` in the current kitty tab and writes a row to a flat session-registry file — so a parent Claude session can `grep <component> ${XDG_RUNTIME_DIR:-/tmp}/ac/sessions` instead of parsing the kilobytes of JSON `kitty @ ls` returns. Token savings add up across a long session.
 
 ### Requirements
 
@@ -52,14 +84,14 @@ The `dispatching-prompts` skill assumes you can launch agent sessions in named t
 
 ### Install
 
-If you're going to use `npx` to install the skills anyway, the simplest setup is to clone this repo once and symlink `ac` from somewhere on your `PATH`:
+Clone this repo once and symlink `ac` from somewhere on your `PATH`:
 
 ```
-git clone https://github.com/mwaddip/claude-dbc.git ~/projects/claude-dbc
-ln -s ~/projects/claude-dbc/ac ~/.local/bin/ac     # or anywhere on PATH
+git clone https://github.com/mwaddip/cdbc.git ~/projects/cdbc
+ln -s ~/projects/cdbc/ac ~/.local/bin/ac     # or anywhere on PATH
 ```
 
-To update: `cd ~/projects/claude-dbc && git pull`. The symlink follows.
+To update: `cd ~/projects/cdbc && git pull`. The symlink follows.
 
 ### Usage
 
@@ -86,14 +118,12 @@ Per-user tmpfs path. Tab-separated, no headers: `<window_id>\t<tab_id>\t<pwd>`. 
 - Kitty-only. Won't work in tmux, screen, or vanilla terminals (relies on `KITTY_WINDOW_ID`).
 - Multi-user safety in the `/tmp` fallback: if `XDG_RUNTIME_DIR` is unset on your system (rare on modern Linux desktops, possible on macOS or minimal containers), two users on the same machine collide on `/tmp/ac/sessions`. Set `XDG_RUNTIME_DIR` per-user, or don't use the fallback.
 
-If you're not on kitty, the `dispatching-prompts` skill still applies as a *concept* (file-path prompt injection between agent sessions in any terminal multiplexer that supports cross-window text injection) but the kitty-specific commands won't work as-is.
+If you're not on kitty, the `dispatching-prompts` and `dispatching-plans` skills still apply as *concepts* (file-path prompt injection and DAG-driven multi-window orchestration in any terminal multiplexer that supports cross-window text injection) but the kitty-specific commands won't work as-is.
 
 ## Skill format
 
-Both skills follow the [agentskills.io specification](https://agentskills.io/specification): YAML frontmatter (`name`, `description`, optional `metadata`) followed by a markdown body, in `<harness-skills-dir>/<skill-name>/SKILL.md`. This is the format Claude Code, Codex, and other compliant harnesses load.
-
-Adapters for other harnesses (Cursor's `.cursor/rules/*.mdc`, Aider's `CONVENTIONS.md`-style references) are not implemented; PRs welcome.
+Skills follow the [agentskills.io specification](https://agentskills.io/specification): YAML frontmatter (`name`, `description`, optional `metadata`) followed by a markdown body, in `skills/<skill-name>/SKILL.md`. This is the format Claude Code and other compliant harnesses load.
 
 ## License
 
-MIT.
+MIT for the original content (see `LICENSE`). See `NOTICE` for the forked content's MIT attribution (Copyright © 2025 Jesse Vincent / superpowers).

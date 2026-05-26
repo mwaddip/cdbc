@@ -10,9 +10,9 @@ metadata:
 
 ## STOP — Role Detection (read this BEFORE acting on anything else in this skill)
 
-**If your first user-instruction in this conversation pointed you at a markdown prompt file to read** (any phrasing that names a prompt file as your task — e.g. "do the work described in <file>", "execute the work in <file>", "use the receiving-prompts skill to execute the work in <file>"), **you are NOT the session that should be using this skill.** You are an EXECUTOR.
+**If your first user-instruction in this conversation pointed you at a markdown prompt file to read** (any phrasing that names a prompt file as your task — e.g. "do the work described in <file>", "execute the work in <file>", "use the cdbc:receiving-prompts skill to execute the work in <file>"), **you are NOT the session that should be using this skill.** You are an EXECUTOR.
 
-**Load the `receiving-prompts` skill instead.** That skill is the counterpart to this one. It establishes executor identity, names the specific failure modes you must avoid (recursive dispatch, editing files outside your boundary, "fixing" the prompt file), and tells you how to read your prompt file and execute the work. Stop applying this skill; load `receiving-prompts` and follow its rules.
+**Load the `cdbc:receiving-prompts` skill instead.** That skill is the counterpart to this one. It establishes executor identity, names the specific failure modes you must avoid (recursive dispatch, editing files outside your boundary, "fixing" the prompt file), and tells you how to read your prompt file and execute the work. Stop applying this skill; load `cdbc:receiving-prompts` and follow its rules.
 
 The rest of this skill — the workflow, the kitty commands, the prompt boilerplate spec — is for the *main* session that dispatches work. Applying it from an executor produces recursive dispatch (you spawn a sub-session, it spawns another, etc.).
 
@@ -122,14 +122,14 @@ Wait ~10 seconds for Claude Code to come up before injecting the prompt instruct
 ### 5. Inject the file-path instruction
 
 ```bash
-kitty @ send-text --match=id:<id> 'use the receiving-prompts skill to execute the work in <absolute path to prompt file>'
+kitty @ send-text --match=id:<id> 'use the cdbc:receiving-prompts skill to execute the work in <absolute path to prompt file>'
 ```
 
-This phrasing deterministically loads the `receiving-prompts` skill in the receiving session, which establishes EXECUTOR identity at load time — before the session can auto-load `dispatching-prompts` (this skill) and misidentify itself as a dispatcher. The `receiving-prompts` skill then orchestrates the rest: reading the prompt file, loading the boilerplate the prompt names, doing the work, reporting back via the coordination channel.
+This phrasing deterministically loads the `cdbc:receiving-prompts` skill in the receiving session, which establishes EXECUTOR identity at load time — before the session can auto-load `cdbc:dispatching-prompts` (this skill) and misidentify itself as a dispatcher. The `cdbc:receiving-prompts` skill then orchestrates the rest: reading the prompt file, loading the boilerplate the prompt names, doing the work, reporting back via the coordination channel.
 
 **Do NOT inject the prompt content itself** via `--from-file` or `--stdin`. Long content interacts badly with the input buffer (autocompletion, line-wrapping, multiline edge cases) and there's no good way to verify the new session received it cleanly. The receiving session reads the file itself via the file-path argument.
 
-**Phrasings to avoid**: `"execute the prompt in <file>"` and `"do the work described in <file>"` both auto-activate this skill's dispatch associations in the receiving session, producing recursive dispatch. The `"use the receiving-prompts skill"` prefix is the disambiguator that names the right skill.
+**Phrasings to avoid**: `"execute the prompt in <file>"` and `"do the work described in <file>"` both auto-activate this skill's dispatch associations in the receiving session, producing recursive dispatch. The `"use the cdbc:receiving-prompts skill"` prefix is the disambiguator that names the right skill.
 
 ### 6. Halt, confirm, submit
 
