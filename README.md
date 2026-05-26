@@ -72,6 +72,25 @@ Skills become available under the `cdbc:` namespace (e.g., `cdbc:dispatching-pro
 /plugin update cdbc@cdbc-marketplace
 ```
 
+## Optional: example global config
+
+`extras/CLAUDE.md` and `extras/OVERRIDES.md` are sanitized versions of the author's own Claude Code global config — 20 cross-project working rules (communication style, brainstorming discipline, verification standards, project boundaries, observability) and 8 mechanical overrides (dead-code-first refactoring, phased execution, context-decay awareness, edit integrity, exhaustive rename search, truncation suspicion). They're starting points you can copy and customize:
+
+```
+cp extras/CLAUDE.md ~/.claude/CLAUDE.md         # Claude Code's global instructions
+cp extras/OVERRIDES.md ~/projects/OVERRIDES.md  # referenced from CLAUDE.md
+```
+
+Both files have a placeholder for your own domain-specific additions (a Background section in CLAUDE.md, a Domain-Specific section in OVERRIDES.md).
+
+## Recommended: `rtk` (token-saving proxy)
+
+For long-running multi-session work, [`rtk`](https://github.com/rtk-ai/rtk) (Rust Token Killer) is essential for keeping token usage manageable. It transparently filters and summarizes CLI output (60–90% savings on common operations like `git status`, `ls`, `grep`, `find`, etc.) via a Claude Code hook — so commands you type unchanged get rewritten to `rtk <cmd>` behind the scenes.
+
+cdbc skills do not depend on `rtk`, but if you're running multi-window dispatch flows (`cdbc:dispatching-plans`) where N sessions each consume tool output, the savings compound quickly across the windows. The author considers it essential for the workflow this plugin enables.
+
+Install from: <https://github.com/rtk-ai/rtk>
+
 ## Optional: `ac` (kitty session launcher)
 
 The `dispatching-prompts` and `dispatching-plans` skills assume you can launch agent sessions in named terminal windows that other sessions can find. The author uses kitty + a small bash script called `ac` (Auto Claude), shipped at the top of this repo. `ac` runs `claude` in the current kitty tab and writes a row to a flat session-registry file — so a parent Claude session can `grep <component> ${XDG_RUNTIME_DIR:-/tmp}/ac/sessions` instead of parsing the kilobytes of JSON `kitty @ ls` returns. Token savings add up across a long session.
